@@ -4,6 +4,8 @@ The Local FileSystem Plugin is a pre-packaged, plug-and-play integration compone
 
 This plugin is automatically installed by the FlowSynx engine when selected within the platform. It is not intended for manual installation or standalone developer use outside the FlowSynx environment.
 
+---
+
 ## Purpose
 
 The Local FileSystem Plugin allows FlowSynx users to:
@@ -17,6 +19,8 @@ The Local FileSystem Plugin allows FlowSynx users to:
 - Purge directories when needed.
 - Integrate local file system operations into automation workflows without writing code.
 
+---
+
 ## Supported Operations
 
 - **create**: Creates a new directory at the specified path.
@@ -27,6 +31,8 @@ The Local FileSystem Plugin allows FlowSynx users to:
 - **read**: Reads and returns the contents of a file at the specified path.
 - **write**: Writes data to a specified path, with support for overwrite.
 
+---
+
 ## Plugin Specifications
 
 The plugin does not require any connection configuration as it operates on the local file system where the FlowSynx engine is running.
@@ -36,6 +42,8 @@ The plugin does not require any connection configuration as it operates on the l
 ```json
 {}
 ```
+
+---
 
 ## Input Parameters
 
@@ -96,6 +104,8 @@ Each operation accepts specific parameters:
 }
 ```
 
+---
+
 ## Debugging Tips
 
 - Ensure the path specified exists and is accessible from the FlowSynx engine.
@@ -103,6 +113,8 @@ Each operation accepts specific parameters:
 - Use the `Exist` operation to confirm file or directory presence before performing `Read` or `Delete`.
 - For large directory listings, adjust `MaxResults` to limit returned data.
 - Use absolute paths to avoid ambiguity, or ensure relative paths are resolved correctly based on the engine's working directory.
+
+---
 
 ## Local FileSystem Considerations
 
@@ -114,6 +126,8 @@ Each operation accepts specific parameters:
 - **Directory Operations**: The `Create` operation can create both files and directories. The `Delete` and `Purge` operations work on both as well.
 - **Mounted File Systems**: This plugin works with any file system mounted and accessible to the operating system where FlowSynx is running.
 
+---
+
 ## Security Notes
 
 - File operations are performed with the permissions of the FlowSynx engine process.
@@ -121,6 +135,8 @@ Each operation accepts specific parameters:
 - Be cautious with `Purge` and `Delete` operations as they can permanently remove data.
 - Always validate and sanitize paths to prevent unauthorized access to sensitive system directories.
 - Consider using relative paths and configuring a working directory to limit file system access scope.
+
+---
 
 ## License
 
