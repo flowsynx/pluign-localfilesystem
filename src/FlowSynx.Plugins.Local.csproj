@@ -12,6 +12,10 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<InternalsVisibleTo Include="FlowSynx.Plugins.Local.UnitTests" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<PackageReference Include="FlowSynx.PluginCore" Version="1.3.4" />
 	</ItemGroup>
 

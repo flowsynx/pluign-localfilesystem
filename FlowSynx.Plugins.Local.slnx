@@ -2,4 +2,7 @@
   <Folder Name="/src/">
     <Project Path="src/FlowSynx.Plugins.Local.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/FlowSynx.Plugins.Local.UnitTests.csproj" Id="81133088-6c2f-42f4-87f4-6f56232f4dc7" />
+  </Folder>
 </Solution>
