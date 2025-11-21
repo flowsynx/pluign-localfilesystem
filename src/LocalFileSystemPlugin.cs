@@ -1,4 +1,4 @@
-﻿using FlowSynx.PluginCore;
+using FlowSynx.PluginCore;
 using FlowSynx.PluginCore.Extensions;
 using FlowSynx.Plugins.Local.Models;
 using FlowSynx.Plugins.Local.Services;

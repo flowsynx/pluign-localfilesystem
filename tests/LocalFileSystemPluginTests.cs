@@ -29,7 +29,7 @@ public class LocalFileSystemPluginTests
         Assert.Equal(PluginCategory.Storage, metadata.Category);
         Assert.Equal("FlowSynx", metadata.CompanyName);
         Assert.Contains("FlowSynx", metadata.Authors);
-        Assert.Equal("© FlowSynx. All rights reserved.", metadata.Copyright);
+        Assert.Equal("Â© FlowSynx. All rights reserved.", metadata.Copyright);
         Assert.Equal("flowsynx.png", metadata.Icon);
         Assert.Equal("README.md", metadata.ReadMe);
         Assert.Equal("https://github.com/flowsynx/plugin-json", metadata.RepositoryUrl);
