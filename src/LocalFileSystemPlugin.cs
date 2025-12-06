@@ -1,6 +1,13 @@
 using FlowSynx.PluginCore;
 using FlowSynx.PluginCore.Extensions;
-using FlowSynx.Plugins.Local.Models;
+using FlowSynx.Plugins.Local.Operations.Create;
+using FlowSynx.Plugins.Local.Operations.DeleteFile;
+using FlowSynx.Plugins.Local.Operations.Exist;
+using FlowSynx.Plugins.Local.Operations.List;
+using FlowSynx.Plugins.Local.Operations.Purge;
+using FlowSynx.Plugins.Local.Operations.Read;
+using FlowSynx.Plugins.Local.Operations.Rename;
+using FlowSynx.Plugins.Local.Operations.Write;
 using FlowSynx.Plugins.Local.Services;
 
 namespace FlowSynx.Plugins.Local;
@@ -9,9 +16,9 @@ public class LocalFileSystemPlugin : IPlugin
 {
     private readonly IGuidProvider _guidProvider;
     private readonly IReflectionGuard _reflectionGuard;
+    private LocalFileSystemSpecifications? _specifications = null;
     private IPluginLogger? _logger;
     private bool _isInitialized;
-    private ILocalFileManager _manager = null!;
 
     public LocalFileSystemPlugin() : this(new GuidProvider(), new DefaultReflectionGuard()) { }
 
@@ -26,7 +33,7 @@ public class LocalFileSystemPlugin : IPlugin
         Id = Guid.Parse("f6304870-0294-453e-9598-a82167ace653"),
         Name = "Local",
         Description = Resources.PluginDescription,
-        Version = new Version(1, 0, 0),
+        Version = new Version(1, 1, 0),
         Category = PluginCategory.Storage,
         CompanyName = "FlowSynx",
         Authors = new List<string> { "FlowSynx" },
@@ -36,24 +43,45 @@ public class LocalFileSystemPlugin : IPlugin
         RepositoryUrl = "https://github.com/flowsynx/plugin-json",
         ProjectUrl = "https://flowsynx.io",
         Tags = new List<string>() { "flowSynx", "local", "local-filesystem" },
-        MinimumFlowSynxVersion = new Version(1, 1, 1)
+        MinimumFlowSynxVersion = new Version(1, 3, 0)
     };
 
-    public PluginSpecifications? Specifications { get; set; }
-    public Type SpecificationsType => typeof(LocalFileSystemSpecifications);
+    public IPluginSpecifications? Specifications => _specifications;
 
-    public Task Initialize(IPluginLogger logger)
+    public IReadOnlyCollection<IPluginOperation> SupportedOperations => new IPluginOperation[]
+    {
+        new CreateOperation(),
+        new DeleteFileOperation(_logger),
+        new ExistOperation(),
+        new ListOperation(_logger),
+        new PurgeOperation(_logger),
+        new ReadOperation(),
+        new RenameOperation(_logger),
+        new WriteOperation(_logger),
+    };
+
+    public Task InitializeAsync(IPluginLogger logger, IDictionary<string, object?>? specifications)
     {
         if (_reflectionGuard.IsCalledViaReflection())
             throw new InvalidOperationException(Resources.ReflectionBasedAccessIsNotAllowed);
 
-        ArgumentNullException.ThrowIfNull(logger);
-        _manager = new LocalFileManager(logger);
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+
+        var localFileSystemSpecifications = new LocalFileSystemSpecifications();
+        if (specifications != null)
+            localFileSystemSpecifications.FromDictionary(specifications);
+
+        localFileSystemSpecifications.Validate();
+        _specifications = localFileSystemSpecifications;
+
         _isInitialized = true;
         return Task.CompletedTask;
     }
 
-    public Task<object?> ExecuteAsync(PluginParameters parameters, CancellationToken cancellationToken)
+    public async Task<object?> ExecuteAsync(
+        string? operationName, 
+        PluginParameters parameters, 
+        CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -63,27 +91,37 @@ public class LocalFileSystemPlugin : IPlugin
         if (!_isInitialized)
             throw new InvalidOperationException($"Plugin '{Metadata.Name}' v{Metadata.Version} is not initialized.");
 
-        var operationParameter = parameters.ToObject<OperationParameter>();
-        var operation = operationParameter.Operation;
+        var operation = SupportedOperations
+            .FirstOrDefault(op => string.Equals(op.Name, operationName, StringComparison.OrdinalIgnoreCase))
+            ?? throw new NotSupportedException($"Operation '{operationName}' is not supported.");
 
-        if (OperationMap.TryGetValue(operation, out var handler))
+        return operation.Name.ToLowerInvariant() switch
         {
-            return handler(parameters, cancellationToken);
-        }
+            "create" => await((CreateOperation)operation)
+                            .ExecuteAsync(parameters.ToObject<CreateParameters>(), cancellationToken),
 
-        throw new NotSupportedException(string.Format(Resources.OperationIsNotSupported, operation));
+            "delete" => await ((DeleteFileOperation)operation)
+                .ExecuteAsync(parameters.ToObject<DeleteFileParameters>(), cancellationToken),
+
+            "exist" => await ((ExistOperation)operation)
+                .ExecuteAsync(parameters.ToObject<ExistParameters>(), cancellationToken),
+
+            "list" => await ((ListOperation)operation)
+                .ExecuteAsync(parameters.ToObject<ListParameters>(), cancellationToken),
+
+            "purge" => await ((PurgeOperation)operation)
+                .ExecuteAsync(parameters.ToObject<PurgeParameters>(), cancellationToken),
+
+            "read" => await ((ReadOperation)operation)
+                .ExecuteAsync(parameters.ToObject<ReadParameters>(), cancellationToken),
+
+            "rename" => await ((RenameOperation)operation)
+                .ExecuteAsync(parameters.ToObject<RenameParameters>(), cancellationToken),
+
+            "write" => await ((WriteOperation)operation)
+                .ExecuteAsync(parameters.ToObject<WriteParameters>(), cancellationToken),
+
+            _ => throw new NotSupportedException($"Unsupported operation: {operation.Name}")
+        };
     }
-
-    private Dictionary<string, Func<PluginParameters, CancellationToken, Task<object?>>> OperationMap => new(StringComparer.OrdinalIgnoreCase)
-    {
-        ["create"] = async (parameters, cancellationToken) => { await _manager.Create(parameters, cancellationToken); return null; },
-        ["delete"] = async (parameters, cancellationToken) => { await _manager.Delete(parameters, cancellationToken); return null; },
-        ["exist"] = async (parameters, cancellationToken) => await _manager.Exist(parameters, cancellationToken),
-        ["list"] = async (parameters, cancellationToken) => await _manager.List(parameters, cancellationToken),
-        ["purge"] = async (parameters, cancellationToken) => { await _manager.Purge(parameters, cancellationToken); return null; },
-        ["read"] = async (parameters, cancellationToken) => await _manager.Read(parameters, cancellationToken),
-        ["write"] = async (parameters, cancellationToken) => { await _manager.Write(parameters, cancellationToken); return null; },
-    };
-
-    public IReadOnlyCollection<string> SupportedOperations => OperationMap.Keys;
 }

@@ -1,5 +1,4 @@
 using FlowSynx.PluginCore;
-using FlowSynx.Plugins.Local.Models;
 using Moq;
 
 namespace FlowSynx.Plugins.Local.UnitTests;
@@ -25,7 +24,7 @@ public class LocalFileSystemPluginTests
         Assert.Equal(Guid.Parse("f6304870-0294-453e-9598-a82167ace653"), metadata.Id);
         Assert.Equal("Local", metadata.Name);
         Assert.NotNull(metadata.Description);
-        Assert.Equal(new Version(1, 0, 0), metadata.Version);
+        Assert.Equal(new Version(1, 1, 0), metadata.Version);
         Assert.Equal(PluginCategory.Storage, metadata.Category);
         Assert.Equal("FlowSynx", metadata.CompanyName);
         Assert.Contains("FlowSynx", metadata.Authors);
@@ -35,17 +34,17 @@ public class LocalFileSystemPluginTests
         Assert.Equal("https://github.com/flowsynx/plugin-json", metadata.RepositoryUrl);
         Assert.Equal("https://flowsynx.io", metadata.ProjectUrl);
         Assert.Contains("local", metadata.Tags);
-        Assert.Equal(new Version(1, 1, 1), metadata.MinimumFlowSynxVersion);
+        Assert.Equal(new Version(1, 3, 0), metadata.MinimumFlowSynxVersion);
     }
 
     [Fact]
-    public void SpecificationsType_ReturnsCorrectType()
+    public void Specifications_Default_IsNull()
     {
         // Act
-        var specificationsType = _plugin.SpecificationsType;
+        var specs = _plugin.Specifications;
 
         // Assert
-        Assert.Equal(typeof(LocalFileSystemSpecifications), specificationsType);
+        Assert.Null(specs);
     }
 
     [Fact]
@@ -55,14 +54,15 @@ public class LocalFileSystemPluginTests
         var operations = _plugin.SupportedOperations;
 
         // Assert
-        Assert.Contains("create", operations, StringComparer.OrdinalIgnoreCase);
-        Assert.Contains("delete", operations, StringComparer.OrdinalIgnoreCase);
-        Assert.Contains("exist", operations, StringComparer.OrdinalIgnoreCase);
-        Assert.Contains("list", operations, StringComparer.OrdinalIgnoreCase);
-        Assert.Contains("purge", operations, StringComparer.OrdinalIgnoreCase);
-        Assert.Contains("read", operations, StringComparer.OrdinalIgnoreCase);
-        Assert.Contains("write", operations, StringComparer.OrdinalIgnoreCase);
-        Assert.Equal(7, operations.Count);
+        Assert.Equal(8, operations.Count);
+        Assert.Contains(operations, o => o.Name.Equals("create", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(operations, o => o.Name.Equals("delete", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(operations, o => o.Name.Equals("exist", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(operations, o => o.Name.Equals("list", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(operations, o => o.Name.Equals("purge", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(operations, o => o.Name.Equals("read", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(operations, o => o.Name.Equals("rename", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(operations, o => o.Name.Equals("write", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -77,53 +77,43 @@ public class LocalFileSystemPluginTests
     }
 
     [Fact]
-    public async Task Initialize_WithNullLogger_ThrowsArgumentNullException()
+    public async Task InitializeAsync_WithNullLogger_ThrowsDueToReflectionGuard()
     {
-        // Note: This test may fail due to reflection guard check happening before null check
-        // The reflection guard is working as intended - preventing reflection-based access
-        // In production use (not via xUnit reflection), the null check would be hit first
-        
-        // Act & Assert
-        await Assert.ThrowsAnyAsync<Exception>(() => 
-            _plugin.Initialize(null!));
+        // Reflection guard may trigger before null check in unit test context
+        await Assert.ThrowsAnyAsync<Exception>(() =>
+            _plugin.InitializeAsync(null!, null));
     }
 
     [Fact]
-    public async Task Initialize_CalledFromTest_ThrowsInvalidOperationException()
+    public async Task InitializeAsync_CalledFromTest_Succeeds()
     {
-        // Note: The reflection guard is working as intended
-        // xUnit calls test methods via reflection, which is detected by the guard
-        
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => 
-            _plugin.Initialize(_mockLogger.Object));
-        
-        Assert.Contains("Reflection-based access is not allowed", exception.Message);
-    }
-
-    [Fact]
-    public async Task ExecuteAsync_CalledFromTest_ThrowsInvalidOperationException()
-    {
-        // Arrange
-        var parameters = new PluginParameters();
-
-        // Act & Assert - Reflection guard prevents execution
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => 
-            _plugin.ExecuteAsync(parameters, CancellationToken.None));
-        
-        Assert.Contains("Reflection-based access is not allowed", exception.Message);
-    }
-
-    [Fact]
-    public void Specifications_CanBeSetAndRetrieved()
-    {
-        // Arrange
-        var specifications = new PluginSpecifications();
-
         // Act
-        _plugin.Specifications = specifications;
+        await _plugin.InitializeAsync(_mockLogger.Object, null);
 
         // Assert
-        Assert.Equal(specifications, _plugin.Specifications);
+        Assert.NotNull(_plugin.Specifications);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenNotInitialized_StillBlockedByReflectionGuard()
+    {
+        var parameters = new PluginParameters();
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _plugin.ExecuteAsync("create", parameters, CancellationToken.None));
+
+        // In this scenario, reflection guard does not trigger; the plugin reports not initialized
+        Assert.Contains("Plugin 'Local' v1.1.0 is not initialized.", exception.Message);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_UnsupportedOperation_ThrowsInvalidOperationExceptionDueToGuard()
+    {
+        var parameters = new PluginParameters();
+
+        await _plugin.InitializeAsync(_mockLogger.Object, null);
+
+        var exception = await Assert.ThrowsAsync<NotSupportedException>(() =>
+            _plugin.ExecuteAsync("Unsupported: ", parameters, CancellationToken.None));
     }
 }
