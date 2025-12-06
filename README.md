@@ -97,7 +97,6 @@ Each operation accepts specific parameters:
 
 ```json
 {
-  "Operation": "write",
   "Path": "C:\\data\\documents\\report.json",
   "Data": "{This is the report content.}",
   "Overwrite": true
