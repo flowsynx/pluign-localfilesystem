@@ -15,6 +15,7 @@ The Local FileSystem Plugin allows FlowSynx users to:
 - Delete files or directories.
 - Check the existence of files or directories.
 - Purge directories when needed.
+- Rename files and directories.
 - Integrate local file system operations into automation workflows without writing code.
 
 ## Supported Operations
@@ -25,6 +26,7 @@ The Local FileSystem Plugin allows FlowSynx users to:
 - **list**: Lists files and directories under a specified path, with filtering and optional metadata.
 - **purge**: Deletes all files and directories under the specified path, optionally forcing deletion.
 - **read**: Reads and returns the contents of a file at the specified path.
+- **rename**: Renames a file or directory from an old path to a new path.
 - **write**: Writes data to a specified path, with support for overwrite.
 
 ## Plugin Specifications
@@ -77,6 +79,12 @@ Each operation accepts specific parameters:
 | Parameter     | Type    | Required | Description                             |
 |---------------|---------|----------|-----------------------------------------|
 | `Path`        | string  | Yes      | The path of the file to read.           |
+
+### Rename
+| Parameter     | Type    | Required | Description                                        |
+|---------------|---------|----------|----------------------------------------------------|
+| `Path`		| string  | Yes      | The current path of the file or directory.         |
+| `TargetPath`  | string  | Yes      | The new path for the file or directory.            |
 
 ### Write
 | Parameter     | Type    | Required | Description                                                 |
